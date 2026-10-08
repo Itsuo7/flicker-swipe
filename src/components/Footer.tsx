@@ -15,7 +15,7 @@ export function Footer() {
 
   return (
     <footer className="shrink-0 border-t border-zinc-200 bg-white text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
-      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-2 px-4 py-4 text-center text-xs sm:gap-3 sm:px-8 sm:py-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-1 px-4 py-2 text-center text-xs leading-4 sm:gap-3 sm:px-8 sm:py-6">
         <p>
           Built with <span aria-label="love">❤️</span> by{" "}
           <a
@@ -27,10 +27,10 @@ export function Footer() {
             Theo Yoshimura
           </a>
         </p>
-        <p>
+        <p className="hidden sm:block">
           © {year ?? ""} FlickerSwipe. All rights reserved.
         </p>
-        <p>
+        <p className="hidden sm:block">
           This product uses the TMDB API but is not endorsed or certified by
           TMDB.
         </p>
