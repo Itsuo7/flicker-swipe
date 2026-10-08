@@ -361,7 +361,7 @@ function CardAction({
   return (
     <button
       aria-label={label}
-      className={`grid size-10 place-items-center rounded-full border border-white/25 bg-white/10 transition hover:scale-105 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40 sm:size-11 ${className}`}
+      className={`pointer-events-auto relative z-30 grid size-10 place-items-center rounded-full border border-white/25 bg-white/10 transition hover:scale-105 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40 sm:size-11 ${className}`}
       disabled={disabled}
       onClick={(event) => {
         event.stopPropagation();

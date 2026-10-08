@@ -328,8 +328,8 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
   }, [t.undoFailed, undoMovie]);
 
   return (
-    <div className="flex w-full flex-col items-center justify-center">
-      <div className="relative mx-auto aspect-[2/3] w-[min(92vw,28rem,calc((100dvh-230px)*2/3))] max-w-lg lg:w-[min(92vw,28rem,calc((100dvh-260px)*2/3))]">
+    <div className="relative isolate flex w-full flex-col items-center justify-center">
+      <div className="relative z-0 mx-auto aspect-[2/3] w-[min(92vw,28rem,calc((100dvh-230px)*2/3))] max-w-lg lg:w-[min(92vw,28rem,calc((100dvh-260px)*2/3))]">
         <AnimatePresence initial={false}>
           {movies.slice(0, 3).map((movie, index) => (
             <motion.div
@@ -375,10 +375,10 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
         )}
       </div>
 
-      <div className="mt-1 flex shrink-0 items-center justify-center sm:mt-2">
+      <div className="relative z-30 mt-3 flex shrink-0 items-center justify-center gap-3 pointer-events-auto">
         <button
           aria-label={t.undo}
-          className="flex min-h-9 items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+          className="pointer-events-auto flex min-h-9 items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
           disabled={!undoMovie}
           onClick={() => void undo()}
           type="button"
