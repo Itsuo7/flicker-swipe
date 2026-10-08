@@ -329,7 +329,7 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
 
   return (
     <div className="flex w-full flex-col items-center justify-center">
-      <div className="relative mx-auto h-[clamp(14rem,calc(100dvh-320px),42rem)] w-[min(90vw,26rem)] max-w-lg">
+      <div className="relative mx-auto aspect-[2/3] w-[min(92vw,28rem,calc((100dvh-230px)*2/3))] max-w-lg lg:w-[min(92vw,28rem,calc((100dvh-260px)*2/3))]">
         <AnimatePresence initial={false}>
           {movies.slice(0, 3).map((movie, index) => (
             <motion.div

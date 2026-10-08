@@ -189,7 +189,7 @@ export default function SwipeCard({
     <motion.article
       animate={controls}
       aria-label={`${movie.title}. ${t.movieDetails}`}
-      className={`relative h-full w-full cursor-pointer overflow-hidden rounded-[2rem] bg-slate-950 transition-shadow duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
+      className={`relative aspect-[2/3] h-full w-full cursor-pointer overflow-hidden rounded-[2rem] bg-slate-950 transition-shadow duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
         disabled
           ? "shadow-2xl shadow-black/40 ring-1 ring-white/15"
           : "shadow-[0_0_36px_rgba(52,211,153,0.2),0_24px_60px_rgba(0,0,0,0.5)] ring-2 ring-emerald-400/65"
