@@ -189,7 +189,7 @@ export default function SwipeCard({
     <motion.article
       animate={controls}
       aria-label={`${movie.title}. ${t.movieDetails}`}
-      className={`relative h-full w-full cursor-pointer touch-pan-y overflow-hidden rounded-[2rem] bg-slate-950 transition-shadow duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
+      className={`relative h-full w-full cursor-pointer overflow-hidden rounded-[2rem] bg-slate-950 transition-shadow duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
         disabled
           ? "shadow-2xl shadow-black/40 ring-1 ring-white/15"
           : "shadow-[0_0_36px_rgba(52,211,153,0.2),0_24px_60px_rgba(0,0,0,0.5)] ring-2 ring-emerald-400/65"
@@ -232,27 +232,29 @@ export default function SwipeCard({
       tabIndex={disabled ? -1 : 0}
       whileDrag={{ scale: 1.025 }}
     >
-      {posterPath ? (
-        <Image
-          alt={`${language === "pt-BR" ? "Pôster de" : "Poster for"} ${movie.title}`}
-          className="h-full w-full object-cover object-center"
-          fill
-          priority={!disabled}
-          sizes="(max-width: 640px) 92vw, 430px"
-          src={`https://image.tmdb.org/t/p/w780${posterPath}`}
-          unoptimized
-        />
-      ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_#52776b,_#182622_65%)]" />
-      )}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/10 to-slate-950/95" />
+      <div className="absolute inset-0 touch-none">
+        {posterPath ? (
+          <Image
+            alt={`${language === "pt-BR" ? "Pôster de" : "Poster for"} ${movie.title}`}
+            className="h-full w-full object-cover object-center"
+            fill
+            priority={!disabled}
+            sizes="(max-width: 640px) 92vw, 430px"
+            src={`https://image.tmdb.org/t/p/w780${posterPath}`}
+            unoptimized
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_#52776b,_#182622_65%)]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/10 to-slate-950/95" />
+      </div>
 
-      <div className="absolute left-5 right-5 top-5 flex items-center justify-between">
-        <span className="rounded-full border border-white/25 bg-black/25 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md">
+      <div className="absolute left-4 right-4 top-4 flex items-center justify-between sm:left-5 sm:right-5 sm:top-5">
+        <span className="rounded-full border border-white/25 bg-black/25 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-md sm:px-3 sm:py-1.5 sm:text-[10px] sm:tracking-[0.2em]">
           {t.discoverToday}
         </span>
         {movie.vote_average > 0 && (
-          <span className="flex items-center gap-1 rounded-full border border-white/25 bg-black/30 px-2.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+          <span className="flex items-center gap-1 rounded-full border border-white/25 bg-black/30 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-md sm:px-2.5 sm:py-1.5 sm:text-xs">
             <Star className="text-amber-300" fill="currentColor" size={13} />
             {movie.vote_average.toFixed(1)}
           </span>
@@ -260,30 +262,30 @@ export default function SwipeCard({
       </div>
 
       <motion.div
-        className="pointer-events-none absolute left-5 top-20 rotate-[-12deg] rounded-lg border-[3px] border-emerald-300 px-3 py-1 text-2xl font-black uppercase tracking-widest text-emerald-300"
+        className="pointer-events-none absolute left-4 top-16 rotate-[-12deg] rounded-lg border-2 border-emerald-300 px-2 py-1 text-xl font-black uppercase tracking-widest text-emerald-300 sm:left-5 sm:top-20 sm:border-[3px] sm:px-3 sm:text-2xl"
         style={{ opacity: likeOpacity }}
       >
         {t.like}
       </motion.div>
       <motion.div
-        className="pointer-events-none absolute right-5 top-20 rotate-[12deg] rounded-lg border-[3px] border-rose-300 px-3 py-1 text-2xl font-black uppercase tracking-widest text-rose-300"
+        className="pointer-events-none absolute right-4 top-16 rotate-[12deg] rounded-lg border-2 border-rose-300 px-2 py-1 text-xl font-black uppercase tracking-widest text-rose-300 sm:right-5 sm:top-20 sm:border-[3px] sm:px-3 sm:text-2xl"
         style={{ opacity: passOpacity }}
       >
         {t.discard}
       </motion.div>
       <motion.div
-        className="pointer-events-none absolute inset-x-0 top-20 text-center text-2xl font-black uppercase tracking-widest text-amber-200"
+        className="pointer-events-none absolute inset-x-0 top-16 text-center text-xl font-black uppercase tracking-widest text-amber-200 sm:top-20 sm:text-2xl"
         style={{ opacity: saveOpacity }}
       >
         {t.watchLaterShort}
       </motion.div>
 
-      <div className="absolute inset-x-0 bottom-0 px-6 pb-6 pt-36 text-white sm:px-8 sm:pb-8">
+      <div className="absolute inset-x-0 bottom-0 z-10 max-h-full overflow-y-auto overscroll-contain touch-pan-y px-4 pb-3 pt-24 text-white [-webkit-overflow-scrolling:touch] sm:px-8 sm:pb-8 sm:pt-36">
         {genres.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-2 flex flex-wrap gap-1.5 sm:mb-3 sm:gap-2">
             {genres.map((genre) => (
               <span
-                className="rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-white/90 backdrop-blur"
+                className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/90 backdrop-blur sm:px-2.5 sm:py-1 sm:text-[10px]"
                 key={genre}
               >
                 {genre}
@@ -291,25 +293,25 @@ export default function SwipeCard({
             ))}
           </div>
         )}
-        <h2 className="text-3xl font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-4xl">
+        <h2 className="text-2xl font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-4xl">
           {movie.title}
         </h2>
-        <p className="mt-2 text-sm font-medium text-white/65">
+        <p className="mt-1 text-xs font-medium text-white/65 sm:mt-2 sm:text-sm">
           {releaseYear ?? t.fallbackYear}
         </p>
-        <div className="mt-4 rounded-2xl border border-white/15 bg-slate-950/40 p-4 shadow-lg shadow-black/10 backdrop-blur-xl">
-          <p className="line-clamp-4 text-sm leading-6 tracking-[0.005em] text-white/90">
+        <div className="mt-2 rounded-xl border border-white/15 bg-slate-950/40 p-2.5 shadow-lg shadow-black/10 backdrop-blur-xl sm:mt-4 sm:rounded-2xl sm:p-4">
+          <p className="max-h-24 overflow-y-auto overscroll-contain touch-pan-y text-xs leading-5 tracking-[0.005em] text-white/90 [-webkit-overflow-scrolling:touch] sm:max-h-36 sm:text-sm sm:leading-6">
             {movie.overview || t.fallbackOverview}
           </p>
         </div>
-        <div className="mt-5 flex items-center justify-center gap-3 border-t border-white/15 pt-5">
+        <div className="mt-3 flex items-center justify-center gap-2 border-t border-white/15 pt-3 sm:mt-5 sm:gap-3 sm:pt-5">
           <CardAction
             label={t.discard}
             className="text-rose-200 hover:border-rose-300/50 hover:bg-rose-500/20"
             disabled={disabled}
             onClick={() => void swipe("DISLIKE")}
           >
-            <X size={21} strokeWidth={2.5} />
+            <X className="size-4 sm:size-[21px]" strokeWidth={2.5} />
           </CardAction>
           <CardAction
             label={t.like}
@@ -317,7 +319,7 @@ export default function SwipeCard({
             disabled={disabled}
             onClick={() => void swipe("LIKE")}
           >
-            <Heart fill="currentColor" size={20} />
+            <Heart className="size-4 sm:size-5" fill="currentColor" />
           </CardAction>
           <CardAction
             label={t.watchLater}
@@ -325,7 +327,7 @@ export default function SwipeCard({
             disabled={disabled}
             onClick={() => void swipe("WATCHLATER")}
           >
-            <Bookmark size={18} />
+            <Bookmark className="size-4 sm:size-[18px]" />
           </CardAction>
         </div>
       </div>
@@ -359,7 +361,7 @@ function CardAction({
   return (
     <button
       aria-label={label}
-      className={`grid size-11 place-items-center rounded-full border border-white/25 bg-white/10 transition hover:scale-105 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`grid size-10 place-items-center rounded-full border border-white/25 bg-white/10 transition hover:scale-105 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40 sm:size-11 ${className}`}
       disabled={disabled}
       onClick={(event) => {
         event.stopPropagation();

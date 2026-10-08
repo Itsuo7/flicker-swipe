@@ -29,7 +29,7 @@ export function Navbar() {
       aria-label={t.navLabel}
       className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95"
     >
-      <div className="mx-auto flex h-[68px] w-full max-w-7xl items-center justify-between px-5 sm:px-8">
+      <div className="mx-auto flex h-[68px] w-full max-w-7xl items-center justify-between px-3 sm:px-8">
         <Link
           aria-label="FlickerSwipe home"
           className="flex items-center gap-2.5"
@@ -43,7 +43,7 @@ export function Navbar() {
               strokeWidth={2}
             />
           </span>
-          <span className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+          <span className="hidden text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 min-[820px]:inline">
             FlickerSwipe
           </span>
         </Link>
@@ -57,7 +57,7 @@ export function Navbar() {
               return (
                 <Link
                   aria-current={active ? "page" : undefined}
-                  className={`flex h-10 items-center gap-2 rounded-xl px-2 text-xs font-medium transition sm:px-4 sm:text-sm ${
+                  className={`flex h-10 items-center gap-2 rounded-xl px-1 text-xs font-medium transition lg:px-4 lg:text-sm ${
                     active
                       ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
                       : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
@@ -66,8 +66,8 @@ export function Navbar() {
                   key={href}
                 >
                   <Icon aria-hidden="true" size={17} strokeWidth={1.8} />
-                  <span className="hidden sm:inline">{label}</span>
-                  <span className="sr-only sm:hidden">{label}</span>
+                  <span className="hidden lg:inline">{label}</span>
+                  <span className="sr-only lg:hidden">{label}</span>
                 </Link>
               );
             })}

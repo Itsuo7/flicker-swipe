@@ -14,8 +14,8 @@ export function Footer() {
   }, []);
 
   return (
-    <footer className="border-t border-zinc-200 bg-white text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
-      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-3 px-5 py-6 text-center text-xs sm:px-8">
+    <footer className="shrink-0 border-t border-zinc-200 bg-white text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-2 px-4 py-4 text-center text-xs sm:gap-3 sm:px-8 sm:py-6">
         <p>
           Built with <span aria-label="love">❤️</span> by{" "}
           <a

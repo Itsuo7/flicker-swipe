@@ -12,7 +12,7 @@ export function HomeCopy({
 
   if (variant === "desktop") {
     return (
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
           {t.homeEyebrow}
         </p>
@@ -28,14 +28,14 @@ export function HomeCopy({
 
   if (variant === "mobile") {
     return (
-      <div className="mb-5 text-center md:hidden">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+      <div className="mb-2 shrink-0 text-center lg:hidden">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400 sm:text-xs">
           {t.homeEyebrow}
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em]">
+        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.05em] sm:text-3xl">
           {t.homeMobileTitle}
         </h1>
-        <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+        <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-zinc-600 dark:text-zinc-400 sm:text-sm sm:leading-6">
           {t.homeDescription}
         </p>
       </div>
@@ -62,7 +62,7 @@ export function HomeCopy({
   }
 
   return (
-    <aside className="hidden justify-self-end md:block">
+    <aside className="hidden justify-self-end lg:block">
       <div className="max-w-[230px] border-l border-zinc-300 pl-5 dark:border-zinc-700">
         <p className="text-sm font-semibold">{t.howItWorks}</p>
         <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">

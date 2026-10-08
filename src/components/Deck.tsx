@@ -328,8 +328,8 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
   }, [t.undoFailed, undoMovie]);
 
   return (
-    <div className="w-full">
-      <div className="relative mx-auto h-[min(74vh,720px)] min-h-[540px] w-full max-w-lg">
+    <div className="flex w-full flex-col items-center justify-center">
+      <div className="relative mx-auto h-[clamp(14rem,calc(100dvh-320px),42rem)] w-[min(90vw,26rem)] max-w-lg">
         <AnimatePresence initial={false}>
           {movies.slice(0, 3).map((movie, index) => (
             <motion.div
@@ -375,10 +375,10 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
         )}
       </div>
 
-      <div className="mt-5 flex items-center justify-center">
+      <div className="mt-1 flex shrink-0 items-center justify-center sm:mt-2">
         <button
           aria-label={t.undo}
-          className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex min-h-9 items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
           disabled={!undoMovie}
           onClick={() => void undo()}
           type="button"
@@ -389,14 +389,14 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
       </div>
       {error && (
         <p
-          className="mx-auto mt-4 max-w-sm text-center text-sm text-red-400"
+          className="mx-auto mt-1 max-w-sm shrink-0 text-center text-xs text-red-400 sm:text-sm"
           role="alert"
         >
           {error}
         </p>
       )}
       {isLoadingMore && (
-        <p className="mt-4 flex items-center justify-center gap-2 text-sm text-zinc-400">
+        <p className="mt-1 flex shrink-0 items-center justify-center gap-2 text-xs text-zinc-400 sm:text-sm">
           <LoaderCircle className="animate-spin" size={16} />
           {t.loadingMore}
         </p>

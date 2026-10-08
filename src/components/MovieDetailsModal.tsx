@@ -168,7 +168,7 @@ export function MovieDetailsModal({
             animate={{ y: 0, opacity: 1 }}
             aria-labelledby="movie-details-title"
             aria-modal="true"
-            className="relative flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-zinc-700 bg-zinc-950 text-zinc-100 shadow-2xl sm:rounded-3xl"
+            className="relative flex max-h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-zinc-700 bg-zinc-950 text-zinc-100 shadow-2xl sm:rounded-3xl"
             exit={{ y: 30, opacity: 0 }}
             initial={{ y: 30, opacity: 0 }}
             role="dialog"
@@ -185,7 +185,7 @@ export function MovieDetailsModal({
             </button>
 
             {details ? (
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
                 <MovieDetailContent
                   details={details}
                   onHeaderSwipe={onAction ? requestAction : undefined}
@@ -345,7 +345,7 @@ function MovieDetailContent({
               ))}
             </div>
           )}
-          <p className="mt-5 max-h-[60vh] overflow-y-auto whitespace-pre-line text-sm leading-7 text-zinc-300">
+          <p className="mt-5 max-h-[60dvh] overflow-y-auto overscroll-contain touch-pan-y whitespace-pre-line text-sm leading-7 text-zinc-300 [-webkit-overflow-scrolling:touch]">
             {details.overview || t.fallbackOverview}
           </p>
         </div>

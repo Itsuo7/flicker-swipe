@@ -4,7 +4,7 @@
 
 FlickerSwipe combines a swipeable discovery deck with a viewer's IMDb ratings to shape movie recommendations. Like a film, pass on it, or save it for later; import an IMDb ratings export to give recommendations a head start; and explore a profile that makes those preferences visible.
 
-> Built as a portfolio project by [Theo Yoshimura](https://github.com/Itsuo7). Movie metadata and imagery are provided by [TMDb](https://www.themoviedb.org/).
+> Built by [Theo Yoshimura](https://github.com/Itsuo7). Movie metadata and imagery are provided by [TMDb](https://www.themoviedb.org/).
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-149ECA?logo=react)
@@ -27,6 +27,7 @@ FlickerSwipe combines a swipeable discovery deck with a viewer's IMDb ratings to
 ## Product experience
 
 ### Movie discovery
+
 
 The Discover page presents one movie at a time with a layered deck for the next titles. Swipe or use the controls to record a choice:
 

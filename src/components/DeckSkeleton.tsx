@@ -8,7 +8,7 @@ export function DeckSkeleton() {
     <div
       aria-label={t.loadingMovies}
       aria-busy="true"
-      className="relative isolate flex h-[min(74vh,720px)] min-h-[540px] w-full max-w-lg flex-col justify-end overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-900 p-7 shadow-2xl"
+      className="relative isolate flex min-h-0 w-[min(90vw,26rem)] max-w-lg flex-1 flex-col justify-end overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-900 p-5 shadow-2xl sm:p-7"
     >
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950" />
       <div className="absolute inset-0 -z-10 animate-[deck-shimmer_1.8s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
