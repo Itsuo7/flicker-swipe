@@ -1,4 +1,4 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, countDistinct, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { swipeHistory, userRatings, users } from "@/db/schema";
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
         .from(userRatings)
         .where(eq(userRatings.userId, userId)),
       db
-        .select({ count: count() })
+        .select({ count: countDistinct(swipeHistory.movieId) })
         .from(swipeHistory)
         .where(
           and(
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
           ),
         ),
       db
-        .select({ count: count() })
+        .select({ count: countDistinct(swipeHistory.movieId) })
         .from(swipeHistory)
         .where(
           and(
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
           ),
         ),
       db
-        .select({ count: count() })
+        .select({ count: countDistinct(swipeHistory.movieId) })
         .from(swipeHistory)
         .where(eq(swipeHistory.userId, userId)),
       getTasteGenres(userId, language),

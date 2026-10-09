@@ -10,6 +10,7 @@ export interface TMDBMovie {
   genre_ids: number[];
   release_date: string;
   vote_average: number;
+  vote_count?: number;
 }
 
 export interface TMDBMovieDetails extends Omit<TMDBMovie, "genre_ids"> {
@@ -26,6 +27,7 @@ export interface TMDBExpandedMovieDetails {
   release_date: string;
   runtime: number | null;
   vote_average: number;
+  certification: string | null;
   genres: { id: number; name: string }[];
   cast: { id: number; name: string; character: string; profile_path: string | null }[];
   trailerKey: string | null;
@@ -64,6 +66,103 @@ interface TMDBWatchProvidersResponse {
   >;
 }
 
+interface TMDBReleaseDatesResponse {
+  results: {
+    iso_3166_1: string;
+    release_dates: { certification: string; type: number }[];
+  }[];
+}
+
+const minimumVoteCount = 100;
+const minimumVoteAverage = 3;
+const bayesianPriorVotes = 1000;
+const bayesianPriorMean = 6.5;
+const decadeStarts = [1970, 1980, 1990, 2000, 2010, 2020];
+
+export function isQualityMovie(movie: TMDBMovie): boolean {
+  return (
+    (movie.vote_count ?? 0) >= minimumVoteCount &&
+    movie.vote_average > minimumVoteAverage
+  );
+}
+
+// Weighted rating: pulls low-vote movies toward the mean so well-tested films rank first.
+function qualityScore(movie: TMDBMovie): number {
+  const votes = movie.vote_count ?? 0;
+  return (
+    (votes / (votes + bayesianPriorVotes)) * movie.vote_average +
+    (bayesianPriorVotes / (votes + bayesianPriorVotes)) * bayesianPriorMean
+  );
+}
+
+function decadeOf(movie: TMDBMovie): number {
+  const year = Number(movie.release_date.slice(0, 4));
+  return Number.isFinite(year) ? Math.floor(year / 10) * 10 : 0;
+}
+
+// Ranks each decade by quality, then interleaves decades so no single era dominates.
+export function rankAndBalanceMovies(movies: TMDBMovie[]): TMDBMovie[] {
+  const seen = new Set<number>();
+  const byDecade = new Map<number, TMDBMovie[]>();
+  for (const movie of movies) {
+    if (seen.has(movie.id) || !isQualityMovie(movie)) {
+      continue;
+    }
+    seen.add(movie.id);
+    const decade = decadeOf(movie);
+    byDecade.set(decade, [...(byDecade.get(decade) ?? []), movie]);
+  }
+
+  const queues = [...byDecade.values()].map((queue) =>
+    queue.sort((a, b) => qualityScore(b) - qualityScore(a)),
+  );
+  const balanced: TMDBMovie[] = [];
+  for (let index = 0; queues.some((queue) => index < queue.length); index += 1) {
+    const round = queues
+      .map((queue) => queue[index])
+      .filter((movie): movie is TMDBMovie => Boolean(movie))
+      .sort((a, b) => qualityScore(b) - qualityScore(a));
+    balanced.push(...round);
+  }
+  return balanced;
+}
+
+async function discoverAcrossDecades(
+  page: number,
+  language: Language,
+  extraParams: Record<string, string> = {},
+): Promise<TMDBMovie[]> {
+  const currentYear = new Date().getFullYear();
+  const responses = await Promise.allSettled(
+    decadeStarts.map((start) => {
+      const query = new URLSearchParams({
+        ...extraParams,
+        page: String(page),
+        sort_by: "vote_count.desc",
+        "vote_count.gte": String(minimumVoteCount),
+        "vote_average.gte": String(minimumVoteAverage + 0.1),
+        "primary_release_date.gte": `${start}-01-01`,
+        "primary_release_date.lte": `${Math.min(start + 9, currentYear)}-12-31`,
+      });
+      return fetchTMDB<{ results: TMDBMovie[] }>(
+        `/discover/movie?${query.toString()}`,
+        undefined,
+        language,
+      );
+    }),
+  );
+  const fulfilled = responses.flatMap((response) =>
+    response.status === "fulfilled" ? response.value.results : [],
+  );
+  if (fulfilled.length === 0) {
+    const failure = responses.find((response) => response.status === "rejected");
+    if (failure?.status === "rejected") {
+      throw failure.reason;
+    }
+  }
+  return rankAndBalanceMovies(fulfilled);
+}
+
 const tmdbBaseUrl = (
   process.env.TMDB_BASE_URL ?? "https://api.themoviedb.org/3"
 ).replace(/\/+$/, "");
@@ -88,6 +187,7 @@ async function fetchTMDB<T>(
       Accept: "application/json",
     },
     signal,
+    next: { revalidate: 3600 },
   });
 
   if (!response.ok) {
@@ -104,24 +204,43 @@ export async function getExpandedMovieDetails(
   language: Language = defaultLanguage,
 ): Promise<TMDBExpandedMovieDetails> {
   const moviePath = `/movie/${encodeURIComponent(tmdbId)}`;
-  const [details, credits, videos, watchProviders] = await Promise.all([
-    fetchTMDB<TMDBMovieDetails>(moviePath, undefined, language),
-    fetchTMDB<TMDBCreditsResponse>(
-      `${moviePath}/credits`,
-      undefined,
-      language,
-    ),
-    fetchTMDB<TMDBVideosResponse>(
-      `${moviePath}/videos`,
-      undefined,
-      language,
-    ),
-    fetchTMDB<TMDBWatchProvidersResponse>(
-      `${moviePath}/watch/providers`,
-      undefined,
-      language,
-    ),
-  ]);
+  const [details, credits, videos, watchProviders, releaseDates] =
+    await Promise.all([
+      fetchTMDB<TMDBMovieDetails>(moviePath, undefined, language),
+      fetchTMDB<TMDBCreditsResponse>(
+        `${moviePath}/credits`,
+        undefined,
+        language,
+      ),
+      fetchTMDB<TMDBVideosResponse>(
+        `${moviePath}/videos`,
+        undefined,
+        language,
+      ),
+      fetchTMDB<TMDBWatchProvidersResponse>(
+        `${moviePath}/watch/providers`,
+        undefined,
+        language,
+      ),
+      fetchTMDB<TMDBReleaseDatesResponse>(
+        `${moviePath}/release_dates`,
+        undefined,
+        language,
+      ).catch(() => ({ results: [] }) as TMDBReleaseDatesResponse),
+    ]);
+  const certificationCountry = (code: string) =>
+    releaseDates.results
+      .find((item) => item.iso_3166_1 === code)
+      ?.release_dates.filter((release) => release.certification.trim());
+  const certificationReleases =
+    certificationCountry(language === "pt-BR" ? "BR" : "US") ??
+    certificationCountry("US") ??
+    [];
+  const certification =
+    (
+      certificationReleases.find((release) => release.type === 3) ??
+      certificationReleases[0]
+    )?.certification.trim() || null;
   const video =
     videos.results.find(
       (item) => item.site === "YouTube" && item.type === "Trailer",
@@ -143,6 +262,7 @@ export async function getExpandedMovieDetails(
     release_date: details.release_date,
     runtime: details.runtime ?? null,
     vote_average: details.vote_average,
+    certification,
     genres: details.genres,
     cast: credits.cast.slice(0, 12),
     trailerKey: video?.key ?? null,
@@ -187,29 +307,14 @@ export async function getMoviesByGenres(
   page: number,
   language: Language = defaultLanguage,
 ): Promise<TMDBMovie[]> {
-  const query = new URLSearchParams({
+  return discoverAcrossDecades(page, language, {
     with_genres: genreIds.join("|"),
-    page: String(page),
   });
-  const result = await fetchTMDB<{ results: TMDBMovie[] }>(
-    `/discover/movie?${query.toString()}`,
-    undefined,
-    language,
-  );
-
-  return result.results;
 }
 
 export async function getPopularMovies(
   page: number,
   language: Language = defaultLanguage,
 ): Promise<TMDBMovie[]> {
-  const query = new URLSearchParams({ page: String(page) });
-  const result = await fetchTMDB<{ results: TMDBMovie[] }>(
-    `/movie/popular?${query.toString()}`,
-    undefined,
-    language,
-  );
-
-  return result.results;
+  return discoverAcrossDecades(page, language);
 }

@@ -142,6 +142,10 @@ export const swipeHistory = pgTable(
       .notNull(),
   },
   (table) => [
+    uniqueIndex("swipe_history_user_movie_unique").on(
+      table.userId,
+      table.movieId,
+    ),
     index("swipe_history_user_created_at_idx").on(
       table.userId,
       table.createdAt,

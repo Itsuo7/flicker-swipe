@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { detectRequestLanguage } from "@/lib/language";
+import { requireSessionUser } from "@/lib/api-auth";
 import { getExpandedMovieDetails } from "@/lib/tmdb";
 
 interface RouteContext {
@@ -8,6 +9,10 @@ interface RouteContext {
 
 export async function GET(request: Request, { params }: RouteContext) {
   try {
+    const authResult = await requireSessionUser();
+    if ("response" in authResult) {
+      return authResult.response;
+    }
     const { movieId: rawMovieId } = await params;
     const movieId = Number(rawMovieId);
     if (!Number.isSafeInteger(movieId) || movieId <= 0) {

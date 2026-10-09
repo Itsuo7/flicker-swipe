@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { Heart, LoaderCircle, RotateCcw } from "lucide-react";
 import SwipeCard, { type SwipeDirection } from "@/components/SwipeCard";
 import { usePreferences } from "@/components/PreferencesProvider";
@@ -20,6 +21,7 @@ interface SwipeResponse {
 
 export function Deck({ initialMovies, initialLanguage }: DeckProps) {
   const { language, t } = usePreferences();
+  const router = useRouter();
   const [movies, setMovies] = useState(initialMovies);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -36,7 +38,35 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
   const fetchMoreRef = useRef<() => Promise<void>>(async () => {});
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshRetriesRef = useRef(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const lockedRef = useRef(false);
+  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const setLock = useCallback((locked: boolean) => {
+    lockedRef.current = locked;
+    if (lockTimerRef.current) {
+      clearTimeout(lockTimerRef.current);
+      lockTimerRef.current = null;
+    }
+    if (locked) {
+      // Watchdog: never stay locked if an animation callback is lost.
+      lockTimerRef.current = setTimeout(() => {
+        lockTimerRef.current = null;
+        lockedRef.current = false;
+        setIsLocked(false);
+      }, 1500);
+    }
+    setIsLocked(locked);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (lockTimerRef.current) {
+        clearTimeout(lockTimerRef.current);
+      }
+    },
+    [],
+  );
   const scheduleRefreshRetry = useCallback(() => {
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
@@ -83,7 +113,6 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
         return;
       }
 
-      refreshRetriesRef.current = 0;
       pageRef.current += 1;
       for (const movie of moreMovies) {
         seenMovieIds.current.add(movie.id);
@@ -96,7 +125,15 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
         ];
       });
       if (result.refreshing) {
-        scheduleRefreshRetry();
+        // Bounded: a server that keeps reporting "refreshing" must not loop forever.
+        refreshRetriesRef.current += 1;
+        if (refreshRetriesRef.current >= 10) {
+          exhaustedRef.current = true;
+        } else {
+          scheduleRefreshRetry();
+        }
+      } else {
+        refreshRetriesRef.current = 0;
       }
     } catch (fetchError) {
       setError(
@@ -249,6 +286,8 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
 
   const handleSwipe = useCallback(
     (movie: SwipeMovie, action: SwipeDirection) => {
+      // Keep the lock until the exit animation finishes (see onExitComplete).
+      setLock(true);
       setMovies((currentMovies) =>
         currentMovies.filter((item) => item.id !== movie.id),
       );
@@ -278,7 +317,10 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
             throw new Error(result.error ?? t.swipeFailed);
           }
         })
-        .then(() => undefined)
+        .then(() => {
+          // Route handlers don't clear the client Router Cache; do it explicitly.
+          router.refresh();
+        })
         .catch((swipeError: unknown) => {
           setError(
             swipeError instanceof Error
@@ -294,11 +336,11 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
       pendingSwipes.current.set(movie.id, request);
       void request.catch(() => {});
     },
-    [language, t.swipeFailed],
+    [language, router, setLock, t.swipeFailed],
   );
 
   const undo = useCallback(async () => {
-    if (!undoMovie) {
+    if (!undoMovie || lockedRef.current) {
       return;
     }
 
@@ -325,15 +367,20 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
     exhaustedRef.current = false;
     setMovies((currentMovies) => [undoMovie, ...currentMovies]);
     setUndoMovie(null);
-  }, [t.undoFailed, undoMovie]);
+    router.refresh();
+  }, [router, t.undoFailed, undoMovie]);
 
   return (
     <div className="relative isolate flex w-full flex-col items-center justify-center">
       <div className="relative z-0 mx-auto aspect-[2/3] w-[min(92vw,28rem,calc((100dvh-230px)*2/3))] max-w-lg lg:w-[min(92vw,28rem,calc((100dvh-260px)*2/3))]">
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} onExitComplete={() => setLock(false)}>
           {movies.slice(0, 3).map((movie, index) => (
             <motion.div
-              className="absolute inset-0"
+              className={`absolute inset-0 ${
+                index === 0 && !isLocked
+                  ? "pointer-events-auto"
+                  : "pointer-events-none"
+              }`}
               key={movie.id}
               style={{
                 zIndex: 3 - index,
@@ -348,6 +395,7 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
               exit={{
                 opacity: 0,
                 scale: 0.92,
+                pointerEvents: "none",
                 transition: { duration: 0.2 },
               }}
             >
@@ -356,7 +404,8 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
                 onSwipe={(action) => handleSwipe(movie, action)}
                 isExpanded={index === 0 && isExpanded}
                 onExpandedChange={setIsExpanded}
-                disabled={index !== 0}
+                disabled={index !== 0 || isLocked}
+                onAnimatingChange={setLock}
               />
             </motion.div>
           ))}
@@ -379,7 +428,7 @@ export function Deck({ initialMovies, initialLanguage }: DeckProps) {
         <button
           aria-label={t.undo}
           className="pointer-events-auto flex min-h-9 items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
-          disabled={!undoMovie}
+          disabled={!undoMovie || isLocked}
           onClick={() => void undo()}
           type="button"
         >

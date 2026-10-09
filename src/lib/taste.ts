@@ -4,8 +4,8 @@ import { swipeHistory, userRatings } from "@/db/schema";
 import { defaultLanguage, type Language } from "@/lib/i18n";
 import { getMovieDetails } from "@/lib/tmdb";
 
-const tasteMovieLimit = 20;
-const genreLookupConcurrency = 5;
+const tasteMovieLimit = 200;
+const genreLookupConcurrency = 10;
 const genreLookupTimeoutMs = 10_000;
 
 interface TasteSignal {

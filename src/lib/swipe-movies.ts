@@ -2,6 +2,7 @@ import {
   and,
   desc,
   eq,
+  gt,
   notExists,
   notInArray,
   sql,
@@ -125,6 +126,7 @@ export async function getSwipeMovies(
   language: Language = defaultLanguage,
 ): Promise<SwipeMovie[]> {
   const cachedConditions = [
+    gt(movieCache.voteAverage, 3),
     notExists(
       db
         .select({ one: sql`1` })
@@ -163,7 +165,7 @@ export async function getSwipeMovies(
     })
     .from(movieCache)
     .where(and(...cachedConditions))
-    .orderBy(desc(movieCache.cachedAt))
+    .orderBy(desc(movieCache.cachedAt), desc(movieCache.voteAverage))
     .limit(Math.max(limit, minimumCachedMovies));
 
   if (cachedMovies.length < minimumCachedMovies) {

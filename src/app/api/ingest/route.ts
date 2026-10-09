@@ -8,6 +8,8 @@ import { detectRequestLanguage } from "@/lib/language";
 import { warmSwipeMovieCache } from "@/lib/swipe-movies";
 import { requireSessionUser } from "@/lib/api-auth";
 
+export const maxDuration = 60;
+
 const lookupConcurrency = 10;
 const cacheLookupBatchSize = 50;
 const insertBatchSize = 100;

@@ -67,6 +67,12 @@ interface WatchlistGridProps {
 export function WatchlistGrid({ movies: initialMovies }: WatchlistGridProps) {
   const { t } = usePreferences();
   const [movies, setMovies] = useState(initialMovies);
+  const [syncedMovies, setSyncedMovies] = useState(initialMovies);
+  if (syncedMovies !== initialMovies) {
+    // Server data changed (router.refresh / navigation): adopt it.
+    setSyncedMovies(initialMovies);
+    setMovies(initialMovies);
+  }
   const [activeTab, setActiveTab] = useState<WatchlistAction>("LIKE");
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [addingId, setAddingId] = useState<number | null>(null);

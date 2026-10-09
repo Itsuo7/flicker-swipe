@@ -52,7 +52,7 @@ export function HomeCopy({
           {t.connectAccountToSwipe}
         </p>
         <Link
-          href="/profile"
+          href="/login"
           className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-5 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
         >
           {t.profile}

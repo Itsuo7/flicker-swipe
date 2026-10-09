@@ -37,7 +37,7 @@ export default function WatchlistPage() {
 async function WatchlistGate() {
   const userId = await getSessionUserId();
   if (!userId) {
-    redirect("/profile");
+    redirect("/login?callbackUrl=%2Fwatchlist");
   }
 
   return (

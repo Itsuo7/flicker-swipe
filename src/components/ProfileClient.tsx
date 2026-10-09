@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Film } from "lucide-react";
 import { usePreferences } from "@/components/PreferencesProvider";
 import type { Language } from "@/lib/i18n";
 import { SignInOptions } from "@/components/SignInOptions";
@@ -138,9 +139,7 @@ export function ProfileClient() {
             role="status"
           >
             <span aria-hidden="true" className="size-2 rounded-full bg-emerald-500" />
-            {language === "pt-BR"
-              ? "Modo Convidado (test-user-1)"
-              : "Guest Mode (test-user-1)"}
+            {language === "pt-BR" ? "Modo Convidado" : "Guest Mode"}
           </div>
         )}
         <header className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-9">
@@ -202,11 +201,14 @@ export function ProfileClient() {
         </header>
 
         {!session && (
-          <section className="rounded-3xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+          <section className="mx-auto w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 text-center shadow-lg shadow-zinc-900/5 dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+            <span className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-emerald-950/80">
+              <Film aria-hidden="true" className="text-emerald-400" size={24} />
+            </span>
             <h2 className="text-xl font-semibold">
               {language === "pt-BR" ? "Conecte suas contas" : "Connect your accounts"}
             </h2>
-            <p className="mt-2 mb-5 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mb-6 mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               {language === "pt-BR"
                 ? "O Modo Convidado tem acesso completo. Conecte uma conta para associar suas listas ao seu perfil."
                 : "Guest Mode has full access. Connect an account to associate your lists with your profile."}

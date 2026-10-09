@@ -14,48 +14,10 @@ import { requireSessionUser } from "@/lib/api-auth";
 
 type SwipeAction = (typeof swipeActionEnum.enumValues)[number];
 
-interface SwipeMoviePayload {
-  title: string;
-  posterPath: string | null;
-  releaseDate: string;
-  voteAverage: number;
-  genres: string[];
-}
-
 function isSwipeAction(action: unknown): action is SwipeAction {
   return (
     typeof action === "string" &&
     swipeActionEnum.enumValues.some((value) => value === action)
-  );
-}
-
-function isSwipeMoviePayload(value: unknown): value is SwipeMoviePayload {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const movie = value as Record<string, unknown>;
-  return (
-    typeof movie.title === "string" &&
-    movie.title.trim().length > 0 &&
-    movie.title.length <= 300 &&
-    (movie.posterPath === null ||
-      (typeof movie.posterPath === "string" &&
-        movie.posterPath.length <= 300)) &&
-    typeof movie.releaseDate === "string" &&
-    movie.releaseDate.length <= 20 &&
-    typeof movie.voteAverage === "number" &&
-    Number.isFinite(movie.voteAverage) &&
-    movie.voteAverage >= 0 &&
-    movie.voteAverage <= 10 &&
-    Array.isArray(movie.genres) &&
-    movie.genres.length <= 30 &&
-    movie.genres.every(
-      (genre) =>
-        typeof genre === "string" &&
-        genre.trim().length > 0 &&
-        genre.length <= 80,
-    )
   );
 }
 
@@ -180,10 +142,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { movieId, action, movie, language: requestedLanguage } = body as {
+    const { movieId, action, language: requestedLanguage } = body as {
       movieId?: unknown;
       action?: unknown;
-      movie?: unknown;
       language?: unknown;
     };
 
@@ -207,57 +168,36 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (!cachedMovie) {
-      const movieDetails = isSwipeMoviePayload(movie)
-        ? movie
-        : await getMovieDetails(
-            movieId,
-            AbortSignal.timeout(10_000),
-            language,
-          ).then(
-            (details) => ({
-              title: details.title,
-              posterPath: details.poster_path,
-              releaseDate: details.release_date,
-              voteAverage: details.vote_average,
-              genres: details.genres.map((genre) => genre.name),
-            }),
-          );
-      const releaseYear = movieDetails.releaseDate.match(/^\d{4}/)?.[0];
+      // Never trust a client-supplied payload: movieCache is shared by all users.
+      const movieDetails = await getMovieDetails(
+        movieId,
+        AbortSignal.timeout(10_000),
+        language,
+      );
+      const releaseYear = movieDetails.release_date.match(/^\d{4}/)?.[0];
 
       await db
         .insert(movieCache)
         .values({
           tmdbId: movieId,
           title: movieDetails.title.trim(),
-          posterPath: movieDetails.posterPath,
+          posterPath: movieDetails.poster_path,
           year: releaseYear ? Number(releaseYear) : null,
-          voteAverage: movieDetails.voteAverage,
+          voteAverage: movieDetails.vote_average,
         })
         .onConflictDoNothing();
     }
 
-    await db.transaction(async (tx) => {
-      const updated = await tx
-        .update(swipeHistory)
-        .set({ action, createdAt: new Date() })
-        .where(
-          and(
-            eq(swipeHistory.userId, userId),
-            eq(swipeHistory.movieId, movieId),
-          ),
-        )
-        .returning({ id: swipeHistory.id });
-
-      if (updated.length === 0) {
-        await tx.insert(swipeHistory).values({
-          userId,
-          movieId,
-          action,
-        });
-      }
-    });
+    await db
+      .insert(swipeHistory)
+      .values({ userId, movieId, action })
+      .onConflictDoUpdate({
+        target: [swipeHistory.userId, swipeHistory.movieId],
+        set: { action, createdAt: new Date() },
+      });
 
     revalidatePath("/watchlist");
+    revalidatePath("/profile");
     revalidatePath("/");
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -310,6 +250,7 @@ export async function DELETE(request: Request) {
       );
 
     revalidatePath("/watchlist");
+    revalidatePath("/profile");
     revalidatePath("/");
     return NextResponse.json({ success: true });
   } catch (error) {

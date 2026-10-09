@@ -1,8 +1,8 @@
 import { auth, authSecret, oauthProvidersConfigured } from "@/auth";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-
-export const guestUserId = "test-user-1";
+import { cookies } from "next/headers";
+import { guestCookieName, isGuestId } from "@/lib/guest";
 
 export async function getAuthSession() {
   if (!authSecret || !oauthProvidersConfigured) {
@@ -13,20 +13,28 @@ export async function getAuthSession() {
 
 export async function getSessionUserId(): Promise<string | null> {
   const session = await getAuthSession();
-  return session?.user?.id ?? null;
-}
-
-export async function getAuthenticatedUserId(): Promise<string> {
-  const userId = await getSessionUserId();
-  if (userId) {
-    return userId;
+  if (session?.user?.id) {
+    return session.user.id;
   }
 
+  const guestId = (await cookies()).get(guestCookieName)?.value;
+  if (isGuestId(guestId)) {
+    await ensureGuestUser(guestId);
+    return guestId;
+  }
+  return null;
+}
+
+const ensuredGuestIds = new Set<string>();
+
+export async function ensureGuestUser(guestId: string) {
+  if (ensuredGuestIds.has(guestId)) {
+    return;
+  }
   await db.execute(sql`
-    INSERT INTO users (id, email)
-    VALUES (${guestUserId}, 'test-user-1@example.com')
+    INSERT INTO users (id, display_name)
+    VALUES (${guestId}, 'Guest')
     ON CONFLICT DO NOTHING
   `);
-
-  return guestUserId;
+  ensuredGuestIds.add(guestId);
 }

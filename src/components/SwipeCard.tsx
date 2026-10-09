@@ -7,10 +7,12 @@ import {
   motion,
   useAnimation,
   useMotionValue,
+  useIsPresent,
   useTransform,
   type PanInfo,
 } from "framer-motion";
 import type { SwipeMovie } from "@/lib/swipe-movies";
+import { getMovieBadge } from "@/lib/badges";
 import { usePreferences } from "@/components/PreferencesProvider";
 import {
   MovieDetailsModal,
@@ -25,6 +27,7 @@ interface SwipeCardProps {
   isExpanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
   disabled?: boolean;
+  onAnimatingChange?: (animating: boolean) => void;
 }
 
 const swipeThreshold = 105;
@@ -79,6 +82,7 @@ export default function SwipeCard({
   isExpanded,
   onExpandedChange,
   disabled = false,
+  onAnimatingChange,
 }: SwipeCardProps) {
   const { language, t } = usePreferences();
   const closeDetails = useCallback(
@@ -97,20 +101,100 @@ export default function SwipeCard({
   const saveOpacity = useTransform(dragY, [-swipeThreshold, -35], [1, 0]);
   const releaseYear = movie.release_date.match(/^\d{4}/)?.[0];
 
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const pointerMoved = useRef(false);
+  const articleRef = useRef<HTMLElement | null>(null);
+  const capturedPointers = useRef(new Set<number>());
+  const isPresent = useIsPresent();
+  const wasPresent = useRef(true);
+
+  const releaseAllPointers = useCallback(() => {
+    const node = articleRef.current;
+    for (const pointerId of capturedPointers.current) {
+      try {
+        if (node?.hasPointerCapture(pointerId)) {
+          node.releasePointerCapture(pointerId);
+        }
+      } catch {
+        // Pointer already gone.
+      }
+    }
+    capturedPointers.current.clear();
+  }, []);
+
+  // Undo can re-add a card that is still exiting; make it usable again.
+  useEffect(() => {
+    if (isPresent && !wasPresent.current) {
+      isSwiping.current = false;
+      isDragging.current = false;
+      dragX.set(0);
+      dragY.set(0);
+      void controls
+        .start({ x: 0, y: 0, rotate: 0, opacity: 1, scale: 1 })
+        .catch(() => {});
+    }
+    wasPresent.current = isPresent;
+  }, [isPresent, controls, dragX, dragY]);
+
+  // Release any native pointer capture on unmount, even if the pointer never ended.
+  useEffect(() => releaseAllPointers, [releaseAllPointers]);
+
+  const resetGestureState = useCallback(() => {
+    if (dragResetTimer.current) {
+      clearTimeout(dragResetTimer.current);
+      dragResetTimer.current = null;
+    }
+    isDragging.current = false;
+    pointerStart.current = null;
+  }, []);
+
   useEffect(
     () => () => {
       if (dragResetTimer.current) {
         clearTimeout(dragResetTimer.current);
       }
+      isSwiping.current = false;
+      isDragging.current = false;
+      controls.stop();
     },
-    [],
+    [controls],
   );
+
+  // Never leave gesture state stuck if the card becomes inactive mid-gesture.
+  useEffect(() => {
+    if (disabled) {
+      resetGestureState();
+      pointerMoved.current = false;
+    }
+  }, [disabled, resetGestureState]);
+
+  // Safety net: if a drag never receives its end event, release the flag.
+  useEffect(() => {
+    function release() {
+      releaseAllPointers();
+      if (isDragging.current && !dragResetTimer.current) {
+        dragResetTimer.current = setTimeout(() => {
+          isDragging.current = false;
+          dragResetTimer.current = null;
+        }, 200);
+      }
+    }
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    window.addEventListener("blur", release);
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+      window.removeEventListener("blur", release);
+    };
+  }, [releaseAllPointers]);
 
   async function swipe(direction: SwipeDirection) {
     if (isSwiping.current || disabled) {
       return;
     }
     isSwiping.current = true;
+    onAnimatingChange?.(true);
     const distance = Math.max(window.innerWidth, window.innerHeight) * 1.2;
     const target =
       direction === "WATCHLATER"
@@ -121,11 +205,20 @@ export default function SwipeCard({
             rotate: direction === "LIKE" ? 16 : -16,
           };
 
-    await controls.start({
-      ...target,
-      opacity: 0,
-      transition: { duration: 0.32, ease: "easeIn" },
-    });
+    try {
+      await controls.start({
+        ...target,
+        opacity: 0,
+        transition: { duration: 0.32, ease: "easeIn" },
+      });
+    } catch {
+      // Animation interrupted or card unmounted: restore the card.
+      isSwiping.current = false;
+      resetGestureState();
+      onAnimatingChange?.(false);
+      void controls.start({ x: 0, y: 0, rotate: 0, opacity: 1 }).catch(() => {});
+      return;
+    }
     onSwipe(direction);
   }
 
@@ -165,12 +258,16 @@ export default function SwipeCard({
       return;
     }
 
-    await controls.start({
-      x: 0,
-      y: 0,
-      rotate: 0,
-      transition: { type: "spring", stiffness: 350, damping: 28 },
-    });
+    try {
+      await controls.start({
+        x: 0,
+        y: 0,
+        rotate: 0,
+        transition: { type: "spring", stiffness: 350, damping: 28 },
+      });
+    } catch {
+      // Interrupted by a new gesture or unmount; nothing to restore.
+    }
   }
 
   const genres = (movie.genres ??
@@ -205,10 +302,51 @@ export default function SwipeCard({
         }
       }}
       onDragEnd={handleDragEnd}
+      ref={articleRef}
+      onLostPointerCapture={(event) => {
+        capturedPointers.current.delete(event.pointerId);
+      }}
+      onPointerDown={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          capturedPointers.current.add(event.pointerId);
+        }
+        pointerStart.current = { x: event.clientX, y: event.clientY };
+        pointerMoved.current = false;
+      }}
+      onPointerMove={(event) => {
+        const start = pointerStart.current;
+        if (
+          start &&
+          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8
+        ) {
+          pointerMoved.current = true;
+        }
+      }}
+      onPointerCancel={() => {
+        releaseAllPointers();
+        pointerStart.current = null;
+        if (isDragging.current && !dragResetTimer.current) {
+          dragResetTimer.current = setTimeout(() => {
+            isDragging.current = false;
+            dragResetTimer.current = null;
+          }, 200);
+        }
+      }}
       onClick={(event) => {
+        const wasMoved =
+          pointerMoved.current ||
+          (pointerStart.current !== null &&
+            Math.hypot(
+              event.clientX - pointerStart.current.x,
+              event.clientY - pointerStart.current.y,
+            ) > 8);
+        pointerMoved.current = false;
+        pointerStart.current = null;
         if (
           !disabled &&
+          !wasMoved &&
           !isDragging.current &&
+          !isSwiping.current &&
           !(
             event.target instanceof Element &&
             event.target.closest("button")
@@ -251,7 +389,7 @@ export default function SwipeCard({
 
       <div className="absolute left-4 right-4 top-4 flex items-center justify-between sm:left-5 sm:right-5 sm:top-5">
         <span className="rounded-full border border-white/25 bg-black/25 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-md sm:px-3 sm:py-1.5 sm:text-[10px] sm:tracking-[0.2em]">
-          {t.discoverToday}
+          {getMovieBadge(movie, language)}
         </span>
         {movie.vote_average > 0 && (
           <span className="flex items-center gap-1 rounded-full border border-white/25 bg-black/30 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-md sm:px-2.5 sm:py-1.5 sm:text-xs">

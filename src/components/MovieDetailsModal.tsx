@@ -10,7 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bookmark, Heart, LoaderCircle, Star, X } from "lucide-react";
+import { Bookmark, Heart, LoaderCircle, Share2, Star, X } from "lucide-react";
 import { usePreferences } from "@/components/PreferencesProvider";
 import type { TMDBExpandedMovieDetails } from "@/lib/tmdb";
 
@@ -46,9 +46,51 @@ export function MovieDetailsModal({
     message: string;
   } | null>(null);
   const [isVisible, setIsVisible] = useState(true);
-  const [showTrailer, setShowTrailer] = useState(!onAction);
   const pendingAction = useRef<MovieDetailAction | null>(null);
   const close = useCallback(() => setIsVisible(false), []);
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
+  const shareTimeout = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (shareTimeout.current !== null) {
+        window.clearTimeout(shareTimeout.current);
+      }
+    },
+    [],
+  );
+
+  async function shareMovie(movie: TMDBExpandedMovieDetails) {
+    const url = `https://www.themoviedb.org/movie/${movie.id}`;
+    const title = movie.title;
+    const text = `${title} — ${t.shareText}`;
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch (error) {
+        // Dismissing the share sheet is not a failure and should not fall back.
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareStatus("copied");
+      if (shareTimeout.current !== null) {
+        window.clearTimeout(shareTimeout.current);
+      }
+      shareTimeout.current = window.setTimeout(
+        () => setShareStatus("idle"),
+        2000,
+      );
+    } catch (error) {
+      console.error("Could not copy the movie link.", error);
+    }
+  }
   const requestAction = useCallback(
     (action: MovieDetailAction) => {
       if (!onAction || pendingAction.current) {
@@ -111,18 +153,6 @@ export function MovieDetailsModal({
       ) {
         event.preventDefault();
         requestAction(event.key === "ArrowLeft" ? "DISLIKE" : "LIKE");
-      } else if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setShowTrailer((current) => !current);
-      } else if (
-        event.key === " " &&
-        !(
-          event.target instanceof HTMLElement &&
-          event.target.closest("button, a, input, textarea, select")
-        )
-      ) {
-        event.preventDefault();
-        setShowTrailer((current) => !current);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -155,7 +185,7 @@ export function MovieDetailsModal({
       {isVisible && (
         <motion.div
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-2 backdrop-blur-sm sm:p-5"
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           onMouseDown={(event) => {
@@ -168,7 +198,7 @@ export function MovieDetailsModal({
             animate={{ y: 0, opacity: 1 }}
             aria-labelledby="movie-details-title"
             aria-modal="true"
-            className="relative flex max-h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl border border-zinc-700 bg-zinc-950 text-zinc-100 shadow-2xl sm:rounded-3xl"
+            className="relative flex max-h-[85dvh] w-[95vw] max-w-lg flex-col overflow-hidden rounded-3xl border border-zinc-700 bg-zinc-950 text-zinc-100 shadow-2xl sm:max-h-[90dvh] sm:max-w-4xl"
             exit={{ y: 30, opacity: 0 }}
             initial={{ y: 30, opacity: 0 }}
             role="dialog"
@@ -183,13 +213,33 @@ export function MovieDetailsModal({
             >
               <X size={19} />
             </button>
+            {details && (
+              <div className="absolute right-16 top-4 z-20 flex items-center gap-2">
+                {shareStatus === "copied" && (
+                  <span
+                    className="rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white shadow"
+                    role="status"
+                  >
+                    {t.linkCopied}
+                  </span>
+                )}
+                <button
+                  aria-label={t.share}
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 text-sm font-medium text-white backdrop-blur hover:bg-black/80"
+                  onClick={() => void shareMovie(details)}
+                  type="button"
+                >
+                  <Share2 size={17} />
+                  <span className="hidden sm:inline">{t.share}</span>
+                </button>
+              </div>
+            )}
 
             {details ? (
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
                 <MovieDetailContent
                   details={details}
                   onHeaderSwipe={onAction ? requestAction : undefined}
-                  showTrailer={showTrailer}
                 />
               </div>
             ) : error ? (
@@ -204,15 +254,6 @@ export function MovieDetailsModal({
             )}
             {details && (
               <>
-                {details.trailerKey && (
-                  <button
-                    className="absolute bottom-[76px] right-4 z-20 rounded-full border border-white/20 bg-black/70 px-3 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-black"
-                    onClick={() => setShowTrailer((current) => !current)}
-                    type="button"
-                  >
-                    {showTrailer ? t.showDetails : t.showTrailer}
-                  </button>
-                )}
                 {onAction && (
                   <div className="sticky bottom-0 z-10 flex shrink-0 justify-center gap-5 border-t border-zinc-800 bg-zinc-950/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
                     <ModalActionButton
@@ -251,19 +292,31 @@ export function MovieDetailsModal({
 function MovieDetailContent({
   details,
   onHeaderSwipe,
-  showTrailer,
 }: {
   details: TMDBExpandedMovieDetails;
   onHeaderSwipe?: (action: MovieDetailAction) => void;
-  showTrailer: boolean;
 }) {
   const { t } = usePreferences();
+  const [showAllCast, setShowAllCast] = useState(false);
   const releaseYear = details.release_date.match(/^\d{4}/)?.[0];
+  const visibleCast = showAllCast ? details.cast : details.cast.slice(0, 5);
 
   return (
     <>
+      {details.trailerKey ? (
+        <div className="aspect-video w-full bg-black pt-0">
+          <iframe
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className="h-full w-full"
+            referrerPolicy="strict-origin-when-cross-origin"
+            src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(details.trailerKey)}`}
+            title={`${details.title} — ${t.trailer}`}
+          />
+        </div>
+      ) : (
       <motion.div
-        className="relative h-52 touch-pan-y bg-zinc-900 sm:h-72"
+        className="relative h-44 touch-pan-y bg-zinc-900 sm:h-72"
         drag={onHeaderSwipe ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.65}
@@ -289,8 +342,13 @@ function MovieDetailContent({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/35 to-black/10" />
       </motion.div>
+      )}
 
-      <div className="relative -mt-24 grid gap-6 px-5 pb-7 sm:-mt-32 sm:grid-cols-[190px_minmax(0,1fr)] sm:px-8 sm:pb-9">
+      <div
+        className={`relative grid gap-6 px-4 pb-7 sm:grid-cols-[190px_minmax(0,1fr)] sm:px-8 sm:pb-9 ${
+          details.trailerKey ? "pt-5" : "-mt-20 sm:-mt-32"
+        }`}
+      >
         <div className="relative aspect-[2/3] w-32 overflow-hidden rounded-xl bg-zinc-800 shadow-xl sm:w-full">
           {details.poster_path ? (
             <Image
@@ -317,6 +375,14 @@ function MovieDetailContent({
           </h2>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-300">
             {releaseYear && <span>{releaseYear}</span>}
+            {details.certification && (
+              <span
+                className="rounded border border-zinc-500 px-1.5 py-0.5 text-xs font-semibold leading-none text-zinc-200"
+                title={t.contentRating}
+              >
+                {details.certification}
+              </span>
+            )}
             {details.runtime !== null && details.runtime > 0 && (
               <span>
                 {t.runtime}: {details.runtime} {t.minutes}
@@ -354,52 +420,57 @@ function MovieDetailContent({
           <section>
             <h3 className="text-sm font-semibold text-zinc-100">{t.cast}</h3>
             {details.cast.length ? (
-              <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
-                {details.cast.map((person) => (
-                  <div className="w-24 shrink-0" key={person.id}>
-                    <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-zinc-800">
-                      {person.profile_path && (
-                        <Image
-                          alt={person.name}
-                          className="object-cover"
-                          fill
-                          sizes="96px"
-                          src={`https://image.tmdb.org/t/p/w185${person.profile_path}`}
-                          unoptimized
-                        />
-                      )}
-                    </div>
-                    <p className="mt-2 truncate text-xs font-medium">
-                      {person.name}
-                    </p>
-                    <p className="truncate text-xs text-zinc-400">
-                      {person.character}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <>
+                <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {visibleCast.map((person) => (
+                    <li
+                      className="flex min-w-0 items-center gap-3 rounded-lg bg-zinc-900/60 p-2"
+                      key={person.id}
+                    >
+                      <div className="relative size-11 shrink-0 overflow-hidden rounded-full bg-zinc-800">
+                        {person.profile_path && (
+                          <Image
+                            alt={person.name}
+                            className="object-cover"
+                            fill
+                            sizes="44px"
+                            src={`https://image.tmdb.org/t/p/w185${person.profile_path}`}
+                            unoptimized
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium">
+                          {person.name}
+                        </p>
+                        <p className="truncate text-xs text-zinc-400">
+                          {person.character}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {details.cast.length > 5 && (
+                  <button
+                    aria-expanded={showAllCast}
+                    className="mt-3 rounded-full border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-800"
+                    onClick={() => setShowAllCast((current) => !current)}
+                    type="button"
+                  >
+                    {showAllCast
+                      ? t.showLess
+                      : `${t.showMore} (+${details.cast.length - 5})`}
+                  </button>
+                )}
+              </>
             ) : (
               <p className="mt-2 text-sm text-zinc-400">{t.noCast}</p>
             )}
           </section>
 
-          {details.trailerKey && showTrailer ? (
-            <section>
-              <h3 className="mb-3 text-sm font-semibold">{t.trailer}</h3>
-              <div className="aspect-video overflow-hidden rounded-xl bg-black">
-                <iframe
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  className="h-full w-full"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(details.trailerKey)}`}
-                  title={`${details.title} — ${t.trailer}`}
-                />
-              </div>
-            </section>
-          ) : !details.trailerKey ? (
+          {!details.trailerKey && (
             <p className="text-sm text-zinc-400">{t.noTrailer}</p>
-          ) : null}
+          )}
 
           <section>
             <h3 className="text-sm font-semibold">{t.whereToWatch}</h3>

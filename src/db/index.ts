@@ -13,7 +13,8 @@ const globalForPostgres = globalThis as typeof globalThis & {
 };
 
 const client =
-  globalForPostgres.postgresClient ?? postgres(databaseUrl);
+  globalForPostgres.postgresClient ??
+  postgres(databaseUrl, { prepare: false, max: 5 });
 
 if (process.env.NODE_ENV !== "production") {
   globalForPostgres.postgresClient = client;

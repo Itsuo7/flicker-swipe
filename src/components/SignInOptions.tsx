@@ -1,11 +1,11 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface SignInOptionsProps {
   language: "pt-BR" | "en-US";
+  callbackUrl?: string;
 }
 
 interface ProviderAvailability {
@@ -14,7 +14,10 @@ interface ProviderAvailability {
   secretConfigured: boolean;
 }
 
-export function SignInOptions({ language }: SignInOptionsProps) {
+export function SignInOptions({
+  language,
+  callbackUrl = "/profile",
+}: SignInOptionsProps) {
   const portuguese = language === "pt-BR";
   const [providers, setProviders] = useState<ProviderAvailability | null>(null);
   const [configurationError, setConfigurationError] = useState<string | null>(
@@ -24,7 +27,7 @@ export function SignInOptions({ language }: SignInOptionsProps) {
   useEffect(() => {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
-      void fetch("/api/auth/providers", { signal: controller.signal })
+      void fetch("/api/auth-status", { signal: controller.signal })
         .then(async (response) => {
           if (!response.ok) {
             throw new Error(`Provider configuration request failed (${response.status}).`);
@@ -70,7 +73,7 @@ export function SignInOptions({ language }: SignInOptionsProps) {
       return;
     }
 
-    void signIn(provider);
+    void signIn(provider, { callbackUrl });
   }
 
   return (
@@ -84,16 +87,16 @@ export function SignInOptions({ language }: SignInOptionsProps) {
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3">
         <div>
           <button
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-300 bg-white px-4 py-3.5 text-sm font-medium text-zinc-900 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-400 hover:bg-zinc-50 hover:shadow-md active:translate-y-0 active:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
             disabled={!providers?.secretConfigured || !providers?.google}
             onClick={() => beginSignIn("google")}
             type="button"
           >
             <GoogleIcon />
-            {portuguese ? "Conectar Google" : "Connect Google"}
+            {portuguese ? "Continuar com Google" : "Continue with Google"}
           </button>
           {providers && (!providers.secretConfigured || !providers.google) && (
             <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
@@ -105,13 +108,13 @@ export function SignInOptions({ language }: SignInOptionsProps) {
         </div>
         <div>
           <button
-            className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className="inline-flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-900 bg-zinc-900 px-4 py-3.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-zinc-800 hover:shadow-md active:translate-y-0 active:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
             disabled={!providers?.secretConfigured || !providers?.github}
             onClick={() => beginSignIn("github")}
             type="button"
           >
-            <LogIn aria-hidden="true" size={17} />
-            {portuguese ? "Conectar GitHub" : "Connect GitHub"}
+            <GithubIcon />
+            {portuguese ? "Continuar com GitHub" : "Continue with GitHub"}
           </button>
           {providers && (!providers.secretConfigured || !providers.github) && (
             <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
@@ -126,9 +129,22 @@ export function SignInOptions({ language }: SignInOptionsProps) {
   );
 }
 
+function GithubIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-5"
+      fill="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z" />
+    </svg>
+  );
+}
+
 function GoogleIcon() {
   return (
-    <svg aria-hidden="true" className="size-[17px]" viewBox="0 0 48 48">
+    <svg aria-hidden="true" className="size-5" viewBox="0 0 48 48">
       <path
         d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5.1h6.6c3.9-3.6 6.1-8.8 6.1-15Z"
         fill="#4285F4"

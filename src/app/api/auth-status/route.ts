@@ -10,6 +10,8 @@ const githubCredentialsConfigured = Boolean(
     (process.env.AUTH_GITHUB_SECRET || process.env.GITHUB_SECRET),
 );
 
+// Must not live under /api/auth/providers: next-auth/react's signIn() reads that
+// path expecting Auth.js's own provider map.
 export function GET() {
   return NextResponse.json({
     providers: {
