@@ -17,7 +17,7 @@ FlickerSwipe combines a swipeable discovery deck with a viewer's IMDb ratings to
 
 ## At a glance
 
-- **Discover:** Browse a responsive, animated movie deck with mouse, touch, action buttons, or keyboard. Each card carries a dynamic badge ("Masterpiece", "Sci-Fi Spotlight", "Hidden Gem", …).
+- **Discover:** Browse a responsive, animated movie deck with mouse, touch, action buttons, or keyboard. Each card carries a contextual badge ("Masterpiece", "Hidden Gem", "Adrenaline Rush", "Late-Night Chill", …) in English or Portuguese.
 - **Decide:** Like a movie, pass, or add it to Watch Later. Open the details view for the synopsis, an auto-playing trailer embed, content rating, a compact cast list, and a Share button.
 - **Personalize:** Combine explicit swipe choices and imported IMDb ratings into genre-based taste signals.
 - **Import:** Upload an IMDb ratings CSV. Existing movie cache entries are reused; uncached titles are resolved through TMDb.
@@ -40,7 +40,21 @@ The Discover page presents one movie at a time with a layered deck for the next 
 
 Taps are told apart from drags with an 8px movement threshold, so a swipe never opens the details view by accident. Only the top card receives pointer events, and the whole deck is locked while a card animates out; the card data advances only when Framer Motion's `onExitComplete` fires. This prevents rapid swipes and clicks from queueing conflicting actions or leaving the stack unresponsive. A watchdog timer releases the lock if an animation is ever interrupted.
 
-The expanded view is a scrollable, mobile-first modal (`w-[95vw] max-w-lg`, `max-h-[85dvh]`) with a sticky action bar. It shows the trailer when TMDb provides one, the release year and certification (for example PG-13 or R, from TMDb's `release_dates` for the BR or US region), runtime, rating, genres, and the top five cast members with a "Show more" toggle. The **Share** button uses the native Web Share API where available and otherwise copies the TMDb page link to the clipboard with a "Link copied!" confirmation.
+The expanded view is a mobile-first modal (`w-[95vw] max-w-lg`, `max-h-[85dvh]`) with a sticky action bar. It has a single scroll container (page scroll is locked while it is open), so wheel and touch scrolling never get trapped in nested scroll areas. It shows the trailer when TMDb provides one, the release year and certification (for example PG-13 or R, from TMDb's `release_dates` for the BR or US region), runtime, rating, genres, and the top five cast members with a "Show more" toggle. The **Share** button uses the native Web Share API where available and otherwise copies the TMDb page link to the clipboard with a "Link copied!" confirmation.
+
+### Card badges
+
+The badge in the top-left corner of each card comes from `getMovieBadge()` in `src/lib/badges.ts`. It is deterministic per movie, so server and client always render the same label. The first matching rule wins:
+
+| Badge | Rule |
+| --- | --- |
+| Masterpiece | TMDb rating ≥ 8.3 with ≥ 1,000 votes |
+| Hidden Gem | Rating ≥ 7.5 with 100–999 votes |
+| Vintage Classic | Released before 1990, rating ≥ 7.3 |
+| Modern Classic | Released in the last 20 years, rating ≥ 7.8 |
+| Crowd Pleaser | Rating ≥ 7.2 with ≥ 10,000 votes |
+| Genre flavor | Picked by genre, e.g. *Adrenaline Rush* / *Blockbuster Thrill* (action, adventure), *Future Classic* / *Sci-Fi Spotlight*, *Late-Night Chill* / *Edge-of-Your-Seat* (horror, thriller), *Feel-Good Pick* / *Laughter Guaranteed* (comedy), *Emotional Journey* / *Heartwarming Pick* (drama, romance) |
+| Generic | Fallback such as *Must-Watch* or *Tonight's Feature* |
 
 ### Recommendation quality
 

@@ -411,7 +411,7 @@ function MovieDetailContent({
               ))}
             </div>
           )}
-          <p className="mt-5 max-h-[60dvh] overflow-y-auto overscroll-contain touch-pan-y whitespace-pre-line text-sm leading-7 text-zinc-300 [-webkit-overflow-scrolling:touch]">
+          <p className="mt-5 whitespace-pre-line text-sm leading-7 text-zinc-300">
             {details.overview || t.fallbackOverview}
           </p>
         </div>
